@@ -1,3 +1,11 @@
+export interface HistoryEntry {
+  id: string
+  fileName: string
+  timestamp: number
+  analysis: ResumeAnalysis
+  jobDescription?: string
+}
+
 export interface SectionAnalysis {
   score: number
   issues: string[]

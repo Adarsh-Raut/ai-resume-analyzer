@@ -1,12 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useCallback } from "react"
+import { motion } from "framer-motion"
 import { FileUpload } from "@/components/file-upload"
 import { AnalysisCard } from "@/components/analysis-card"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { HiBriefcase, HiChevronDown } from "react-icons/hi2"
+import { HistoryPanel } from "@/components/history-panel"
+import { useAnalysisHistory } from "@/lib/use-analysis-history"
 import type { ResumeAnalysis } from "@/lib/types"
+
+let idCounter = 0
+function nextId() {
+  return `${Date.now()}-${++idCounter}`
+}
 
 export default function Home() {
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null)
@@ -14,36 +20,53 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [jobDescription, setJobDescription] = useState("")
   const [showJdInput, setShowJdInput] = useState(false)
+  const { entries, addEntry, removeEntry, clearHistory } = useAnalysisHistory()
 
-  async function handleAnalyze(file: File) {
-    setLoading(true)
-    setError(null)
-    setAnalysis(null)
+  const handleAnalyze = useCallback(
+    async (file: File) => {
+      setLoading(true)
+      setError(null)
+      setAnalysis(null)
 
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-      if (jobDescription.trim()) {
-        formData.append("jobDescription", jobDescription)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        if (jobDescription.trim()) {
+          formData.append("jobDescription", jobDescription)
+        }
+
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          body: formData,
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data.error ?? "Analysis failed")
+        }
+
+        setAnalysis(data.analysis)
+
+        addEntry({
+          id: nextId(),
+          fileName: file.name,
+          timestamp: Date.now(),
+          analysis: data.analysis,
+          jobDescription: jobDescription.trim() || undefined,
+        })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong")
+      } finally {
+        setLoading(false)
       }
+    },
+    [jobDescription, addEntry]
+  )
 
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        body: formData,
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error ?? "Analysis failed")
-      }
-
-      setAnalysis(data.analysis)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
-    } finally {
-      setLoading(false)
-    }
+  function handleSelectHistory(entry: { analysis: ResumeAnalysis }) {
+    setAnalysis(entry.analysis)
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   return (
@@ -80,6 +103,20 @@ export default function Home() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <FileUpload onAnalyze={handleAnalyze} loading={loading} jobDescription={jobDescription} showJdInput={showJdInput} onToggleJd={() => setShowJdInput(!showJdInput)} onJdChange={setJobDescription} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          className="mt-4"
+        >
+          <HistoryPanel
+            entries={entries}
+            onSelect={handleSelectHistory}
+            onDelete={removeEntry}
+            onClear={clearHistory}
+          />
         </motion.div>
 
         <motion.div
