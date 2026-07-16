@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const analysis = await analyzeResume(text, jobDescription || undefined)
 
-    return NextResponse.json({ analysis })
+    return NextResponse.json({ analysis, text })
   } catch (error) {
     console.error("Analysis error:", error)
     return NextResponse.json({ error: "Analysis failed" }, { status: 500 })

@@ -2,6 +2,16 @@ import { groq } from "@ai-sdk/groq"
 import { generateText } from "ai"
 import { z } from "zod"
 
+const interviewQuestionSchema = z.object({
+  question: z.string(),
+  category: z.string(),
+  suggested_approach: z.string(),
+})
+
+const interviewQuestionsSchema = z.object({
+  questions: z.array(interviewQuestionSchema).min(1),
+})
+
 const sectionSchema = z.object({
   score: z.number().min(0).max(100),
   issues: z.array(z.string()),
@@ -25,6 +35,38 @@ const analysisWithJdSchema = analysisSchema.extend({
   missing_keywords: z.array(z.string()),
   tailored_suggestions: z.array(z.string()),
 })
+
+export async function generateInterviewQuestions(text: string, jobDescription?: string) {
+  const jdSection = jobDescription?.trim()
+    ? `Tailor the questions to the following job description (focus on skills, responsibilities, and challenges mentioned):
+${jobDescription}`
+    : ""
+
+  const { text: content } = await generateText({
+    model: groq("llama-3.3-70b-versatile"),
+    prompt: `You are an interview coach. Based on the following resume, generate a diverse set of interview questions that the candidate should prepare for. Include a mix of behavioral, experience-based, and skill-focused questions.
+
+Return ONLY valid JSON (no markdown, no code fences) with this exact structure:
+{
+  "questions": [
+    {
+      "question": "the interview question",
+      "category": "category label (e.g. Technical, Behavioral, Experience, Leadership, Problem-solving)",
+      "suggested_approach": "concise talking points or framework for answering"
+    }
+  ]
+}
+
+Generate 6-10 questions.
+${jdSection}
+
+Resume:
+${text}`,
+  })
+
+  const object = interviewQuestionsSchema.parse(JSON.parse(content))
+  return object
+}
 
 export async function analyzeResume(text: string, jobDescription?: string) {
   const withJd = !!jobDescription?.trim()

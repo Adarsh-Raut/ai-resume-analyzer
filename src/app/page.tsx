@@ -4,10 +4,12 @@ import { useState, useCallback } from "react"
 import { motion } from "framer-motion"
 import { FileUpload } from "@/components/file-upload"
 import { AnalysisCard } from "@/components/analysis-card"
+import { InterviewQuestionsCard } from "@/components/interview-questions-card"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HistoryPanel } from "@/components/history-panel"
 import { useAnalysisHistory } from "@/lib/use-analysis-history"
-import type { ResumeAnalysis } from "@/lib/types"
+import type { ResumeAnalysis, InterviewQuestion } from "@/lib/types"
+import { HiSparkles } from "react-icons/hi2"
 
 let idCounter = 0
 function nextId() {
@@ -16,10 +18,14 @@ function nextId() {
 
 export default function Home() {
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null)
+  const [resumeText, setResumeText] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [jobDescription, setJobDescription] = useState("")
   const [showJdInput, setShowJdInput] = useState(false)
+  const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [questionsError, setQuestionsError] = useState<string | null>(null)
   const { entries, addEntry, removeEntry, clearHistory } = useAnalysisHistory()
 
   const handleAnalyze = useCallback(
@@ -27,6 +33,9 @@ export default function Home() {
       setLoading(true)
       setError(null)
       setAnalysis(null)
+      setResumeText("")
+      setQuestions(null)
+      setQuestionsError(null)
 
       try {
         const formData = new FormData()
@@ -47,6 +56,7 @@ export default function Home() {
         }
 
         setAnalysis(data.analysis)
+        setResumeText(data.text ?? "")
 
         addEntry({
           id: nextId(),
@@ -64,8 +74,40 @@ export default function Home() {
     [jobDescription, addEntry]
   )
 
+  const handleGenerateQuestions = useCallback(async () => {
+    if (!resumeText.trim()) return
+    setQuestionsLoading(true)
+    setQuestionsError(null)
+    setQuestions(null)
+
+    try {
+      const res = await fetch("/api/generate-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription: jobDescription.trim() || undefined,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to generate questions")
+      }
+
+      setQuestions(data.questions)
+    } catch (err) {
+      setQuestionsError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }, [resumeText, jobDescription])
+
   function handleSelectHistory(entry: { analysis: ResumeAnalysis }) {
     setAnalysis(entry.analysis)
+    setQuestions(null)
+    setQuestionsError(null)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -139,6 +181,62 @@ export default function Home() {
             className="mt-6"
           >
             <AnalysisCard analysis={analysis} />
+          </motion.div>
+        )}
+
+        {analysis && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+            className="mt-4"
+          >
+            <button
+              onClick={handleGenerateQuestions}
+              disabled={questionsLoading}
+              className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/30 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:shadow-none disabled:pointer-events-none"
+            >
+              <span className="relative inline-flex items-center gap-2">
+                <HiSparkles className="h-4 w-4" />
+                {questionsLoading ? "Generating interview questions..." : "Generate Interview Questions"}
+              </span>
+            </button>
+          </motion.div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          {questionsError && (
+            <div className="mt-6 rounded-xl bg-red-50/90 backdrop-blur border border-red-200/50 p-4 text-sm text-red-700">
+              {questionsError}
+            </div>
+          )}
+        </motion.div>
+
+        {questions && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mt-6"
+          >
+            <div className="rounded-2xl bg-white/90 backdrop-blur border border-indigo-100/50 shadow-lg shadow-indigo-500/5 p-6 dark:bg-slate-900/90 dark:border-indigo-800/50 dark:shadow-indigo-900/10">
+              <div className="flex items-center gap-2 mb-5">
+                <HiSparkles className="h-5 w-5 text-amber-500" />
+                <h2 className="text-lg font-heading font-bold text-slate-800 dark:text-slate-100">
+                  Interview Questions
+                </h2>
+                {jobDescription.trim() && (
+                  <span className="text-xs text-slate-400 ml-1 dark:text-slate-500">
+                    (tailored to job)
+                  </span>
+                )}
+              </div>
+              <InterviewQuestionsCard questions={questions} />
+            </div>
           </motion.div>
         )}
       </main>

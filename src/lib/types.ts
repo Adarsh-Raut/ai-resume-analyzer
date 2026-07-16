@@ -12,6 +12,12 @@ export interface SectionAnalysis {
   suggestions: string[]
 }
 
+export interface InterviewQuestion {
+  question: string
+  category: string
+  suggested_approach: string
+}
+
 export interface ResumeAnalysis {
   overall_score: number
   sections: {
