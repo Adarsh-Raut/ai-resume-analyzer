@@ -14,4 +14,7 @@ export interface ResumeAnalysis {
     education: SectionAnalysis
   }
   top_improvements: string[]
+  job_match_score?: number
+  missing_keywords?: string[]
+  tailored_suggestions?: string[]
 }

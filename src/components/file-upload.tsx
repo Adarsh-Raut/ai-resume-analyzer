@@ -3,14 +3,19 @@
 import { useCallback, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { cn } from "@/lib/utils"
-import { HiArrowPath, HiDocumentText, HiCloudArrowUp } from "react-icons/hi2"
+import { AnimatePresence, motion } from "framer-motion"
+import { HiArrowPath, HiDocumentText, HiCloudArrowUp, HiBriefcase, HiChevronDown } from "react-icons/hi2"
 
 interface FileUploadProps {
   onAnalyze: (file: File) => Promise<void>
   loading: boolean
+  jobDescription: string
+  showJdInput: boolean
+  onToggleJd: () => void
+  onJdChange: (value: string) => void
 }
 
-export function FileUpload({ onAnalyze, loading }: FileUploadProps) {
+export function FileUpload({ onAnalyze, loading, jobDescription, showJdInput, onToggleJd, onJdChange }: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null)
 
   const onDrop = useCallback((accepted: File[]) => {
@@ -69,12 +74,46 @@ export function FileUpload({ onAnalyze, loading }: FileUploadProps) {
           )}
         </div>
 
+        <div>
+          <button
+            type="button"
+            onClick={onToggleJd}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+          >
+            <HiBriefcase className="h-4 w-4" />
+            <span>Match to a specific job?</span>
+            <HiChevronDown className={cn(
+              "h-3 w-3 transition-transform duration-200",
+              showJdInput && "rotate-180"
+            )} />
+          </button>
+
+          <AnimatePresence>
+            {showJdInput && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <textarea
+                  value={jobDescription}
+                  onChange={(e) => onJdChange(e.target.value)}
+                  placeholder="Paste the job description here to see how well your resume matches..."
+                  rows={5}
+                  className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-indigo-300 resize-none transition-all"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <button
           onClick={() => file && onAnalyze(file)}
           disabled={!file || loading}
           className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/30 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:shadow-none disabled:pointer-events-none"
         >
-          <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] animate-none" />
           <span className="relative inline-flex items-center gap-2">
             {loading && <HiArrowPath className="h-4 w-4 animate-spin" />}
             {loading ? "Analyzing your resume..." : "Analyze Resume"}

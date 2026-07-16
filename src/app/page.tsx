@@ -1,16 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { FileUpload } from "@/components/file-upload"
 import { AnalysisCard } from "@/components/analysis-card"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { HiBriefcase, HiChevronDown } from "react-icons/hi2"
 import type { ResumeAnalysis } from "@/lib/types"
 
 export default function Home() {
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [jobDescription, setJobDescription] = useState("")
+  const [showJdInput, setShowJdInput] = useState(false)
 
   async function handleAnalyze(file: File) {
     setLoading(true)
@@ -20,6 +23,9 @@ export default function Home() {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      if (jobDescription.trim()) {
+        formData.append("jobDescription", jobDescription)
+      }
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -73,7 +79,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <FileUpload onAnalyze={handleAnalyze} loading={loading} />
+          <FileUpload onAnalyze={handleAnalyze} loading={loading} jobDescription={jobDescription} showJdInput={showJdInput} onToggleJd={() => setShowJdInput(!showJdInput)} onJdChange={setJobDescription} />
         </motion.div>
 
         <motion.div

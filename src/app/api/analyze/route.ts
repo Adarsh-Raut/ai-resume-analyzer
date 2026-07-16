@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const jobDescription = formData.get("jobDescription") as string | null
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No text found in PDF" }, { status: 400 })
     }
 
-    const analysis = await analyzeResume(text)
+    const analysis = await analyzeResume(text, jobDescription || undefined)
 
     return NextResponse.json({ analysis })
   } catch (error) {

@@ -17,14 +17,34 @@ const analysisSchema = z.object({
     skills: sectionSchema,
     education: sectionSchema,
   }),
-  top_improvements: z.array(z.string()).length(3),
+  top_improvements: z.array(z.string()),
 })
 
-export async function analyzeResume(text: string) {
-  const { text: content } = await generateText({
-    model: groq("llama-3.3-70b-versatile"),
-    prompt: `You are a professional resume reviewer. Analyze this resume text and return ONLY valid JSON (no markdown, no code fences) with this exact structure:
-{
+const analysisWithJdSchema = analysisSchema.extend({
+  job_match_score: z.number().min(0).max(100),
+  missing_keywords: z.array(z.string()),
+  tailored_suggestions: z.array(z.string()),
+})
+
+export async function analyzeResume(text: string, jobDescription?: string) {
+  const withJd = !!jobDescription?.trim()
+
+  const schemaPrompt = withJd
+    ? `{
+  "overall_score": 0-100,
+  "sections": {
+    "formatting": { "score": 0-100, "issues": [...], "suggestions": [...] },
+    "summary": { "score": 0-100, "issues": [...], "suggestions": [...] },
+    "experience": { "score": 0-100, "issues": [...], "suggestions": [...] },
+    "skills": { "score": 0-100, "issues": [...], "suggestions": [...] },
+    "education": { "score": 0-100, "issues": [...], "suggestions": [...] }
+  },
+  "top_improvements": ["...", "...", "..."],
+  "job_match_score": 0-100,
+  "missing_keywords": ["...", "..."],
+  "tailored_suggestions": ["...", "...", "..."]
+}`
+    : `{
   "overall_score": 0-100,
   "sections": {
     "formatting": { "score": 0-100, "issues": [...], "suggestions": [...] },
@@ -34,12 +54,29 @@ export async function analyzeResume(text: string) {
     "education": { "score": 0-100, "issues": [...], "suggestions": [...] }
   },
   "top_improvements": ["...", "...", "..."]
-}
+}`
+
+  const jdSection = withJd
+    ? `Also analyze how well this resume matches the following job description. Include:
+- job_match_score: 0-100 score of how well the resume fits this specific role
+- missing_keywords: array of important skills or keywords from the job description that are missing from the resume
+- tailored_suggestions: array of specific changes to make the resume more competitive for this role
+
+Job description:
+${jobDescription}`
+    : ""
+
+  const { text: content } = await generateText({
+    model: groq("llama-3.3-70b-versatile"),
+    prompt: `You are a professional resume reviewer. Analyze this resume text and return ONLY valid JSON (no markdown, no code fences) with this exact structure:
+${schemaPrompt}
 
 Resume text:
-${text}`,
+${text}
+${jdSection}`,
   })
 
-  const object = analysisSchema.parse(JSON.parse(content))
+  const schema = withJd ? analysisWithJdSchema : analysisSchema
+  const object = schema.parse(JSON.parse(content))
   return object
 }
