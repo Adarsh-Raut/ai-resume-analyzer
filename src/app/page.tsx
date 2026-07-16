@@ -1,14 +1,17 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { motion } from "framer-motion"
 import { FileUpload } from "@/components/file-upload"
 import { AnalysisCard } from "@/components/analysis-card"
 import { InterviewQuestionsCard } from "@/components/interview-questions-card"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { HistoryPanel } from "@/components/history-panel"
+import { ModelSelector, loadAIConfig } from "@/components/model-selector"
 import { useAnalysisHistory } from "@/lib/use-analysis-history"
 import type { ResumeAnalysis, InterviewQuestion } from "@/lib/types"
+import type { AIConfig } from "@/lib/ai"
+import { toast } from "sonner"
 import { HiSparkles } from "react-icons/hi2"
 
 let idCounter = 0
@@ -20,28 +23,34 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null)
   const [resumeText, setResumeText] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [jobDescription, setJobDescription] = useState("")
   const [showJdInput, setShowJdInput] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [questionsLoading, setQuestionsLoading] = useState(false)
-  const [questionsError, setQuestionsError] = useState<string | null>(null)
+  const [aiConfig, setAiConfig] = useState<AIConfig | null>(null)
   const { entries, addEntry, removeEntry, clearHistory } = useAnalysisHistory()
+
+  useEffect(() => {
+    setAiConfig(loadAIConfig())
+  }, [])
 
   const handleAnalyze = useCallback(
     async (file: File) => {
       setLoading(true)
-      setError(null)
       setAnalysis(null)
       setResumeText("")
       setQuestions(null)
-      setQuestionsError(null)
 
       try {
         const formData = new FormData()
         formData.append("file", file)
         if (jobDescription.trim()) {
           formData.append("jobDescription", jobDescription)
+        }
+        if (aiConfig) {
+          formData.append("provider", aiConfig.provider)
+          formData.append("apiKey", aiConfig.apiKey)
+          formData.append("model", aiConfig.model)
         }
 
         const res = await fetch("/api/analyze", {
@@ -66,18 +75,17 @@ export default function Home() {
           jobDescription: jobDescription.trim() || undefined,
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong")
+        toast.error(err instanceof Error ? err.message : "Something went wrong")
       } finally {
         setLoading(false)
       }
     },
-    [jobDescription, addEntry]
+    [jobDescription, addEntry, aiConfig]
   )
 
   const handleGenerateQuestions = useCallback(async () => {
     if (!resumeText.trim()) return
     setQuestionsLoading(true)
-    setQuestionsError(null)
     setQuestions(null)
 
     try {
@@ -87,6 +95,9 @@ export default function Home() {
         body: JSON.stringify({
           resumeText,
           jobDescription: jobDescription.trim() || undefined,
+          provider: aiConfig?.provider,
+          apiKey: aiConfig?.apiKey,
+          model: aiConfig?.model,
         }),
       })
 
@@ -98,16 +109,15 @@ export default function Home() {
 
       setQuestions(data.questions)
     } catch (err) {
-      setQuestionsError(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
       setQuestionsLoading(false)
     }
-  }, [resumeText, jobDescription])
+  }, [resumeText, jobDescription, aiConfig])
 
   function handleSelectHistory(entry: { analysis: ResumeAnalysis }) {
     setAnalysis(entry.analysis)
     setQuestions(null)
-    setQuestionsError(null)
     setTimeout(() => {
       document.getElementById("analysis-results")?.scrollIntoView({ behavior: "smooth" })
     }, 0)
@@ -115,8 +125,13 @@ export default function Home() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-950">
-        <div className="absolute top-4 right-4 z-10">
+      <section className="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-950">
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-1">
+          <ModelSelector
+            config={aiConfig}
+            onChange={setAiConfig}
+            onClear={() => setAiConfig(null)}
+          />
           <ThemeToggle />
         </div>
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMSIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
@@ -163,18 +178,6 @@ export default function Home() {
           />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-        >
-          {error && (
-            <div className="mt-6 rounded-xl bg-red-50/90 backdrop-blur border border-red-200/50 p-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-        </motion.div>
-
         {analysis && (
           <motion.div
             id="analysis-results"
@@ -206,18 +209,6 @@ export default function Home() {
             </button>
           </motion.div>
         )}
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-        >
-          {questionsError && (
-            <div className="mt-6 rounded-xl bg-red-50/90 backdrop-blur border border-red-200/50 p-4 text-sm text-red-700">
-              {questionsError}
-            </div>
-          )}
-        </motion.div>
 
         {questions && (
           <motion.div

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs"
-import { analyzeResume } from "@/lib/groq"
+import { analyzeResume } from "@/lib/ai"
+import type { AIConfig } from "@/lib/ai"
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const jobDescription = formData.get("jobDescription") as string | null
+    const provider = formData.get("provider") as string | null
+    const apiKey = formData.get("apiKey") as string | null
+    const model = formData.get("model") as string | null
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -37,7 +41,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No text found in PDF" }, { status: 400 })
     }
 
-    const analysis = await analyzeResume(text, jobDescription || undefined)
+    let aiConfig: AIConfig | undefined
+    if (provider && apiKey && model) {
+      aiConfig = { provider: provider as AIConfig["provider"], apiKey, model }
+    }
+
+    const analysis = await analyzeResume(text, jobDescription || undefined, aiConfig)
 
     return NextResponse.json({ analysis, text })
   } catch (error) {

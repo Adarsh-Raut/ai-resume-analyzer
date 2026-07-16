@@ -1,6 +1,17 @@
-import { groq } from "@ai-sdk/groq"
 import { generateText } from "ai"
+import { createGroq } from "@ai-sdk/groq"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import { createAnthropic } from "@ai-sdk/anthropic"
 import { z } from "zod"
+
+export type AIProvider = "groq" | "openai" | "google" | "anthropic"
+
+export interface AIConfig {
+  provider: AIProvider
+  apiKey: string
+  model: string
+}
 
 const interviewQuestionSchema = z.object({
   question: z.string(),
@@ -36,14 +47,60 @@ const analysisWithJdSchema = analysisSchema.extend({
   tailored_suggestions: z.array(z.string()),
 })
 
-export async function generateInterviewQuestions(text: string, jobDescription?: string) {
+function getModel(config?: AIConfig) {
+  const provider = config?.provider || "groq"
+  const apiKey = config?.apiKey || undefined
+  const model = config?.model || ""
+
+  if (model && apiKey) {
+    // Use user-provided config
+    switch (provider) {
+      case "openai":
+        return createOpenAI({ apiKey })(model)
+      case "google":
+        return createGoogleGenerativeAI({ apiKey })(model)
+      case "anthropic":
+        return createAnthropic({ apiKey })(model)
+      case "groq":
+        return createGroq({ apiKey })(model)
+    }
+  }
+
+  // Default: Groq with env var
+  return createGroq({ apiKey: process.env.GROQ_API_KEY })("llama-3.3-70b-versatile")
+}
+
+export const PROVIDER_DEFAULTS: Record<AIProvider, { models: string[]; defaultModel: string; label: string }> = {
+  groq: {
+    models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"],
+    defaultModel: "llama-3.3-70b-versatile",
+    label: "Groq",
+  },
+  openai: {
+    models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+    defaultModel: "gpt-4o",
+    label: "OpenAI",
+  },
+  google: {
+    models: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+    defaultModel: "gemini-2.0-flash",
+    label: "Google",
+  },
+  anthropic: {
+    models: ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"],
+    defaultModel: "claude-3-5-sonnet-latest",
+    label: "Anthropic",
+  },
+}
+
+export async function generateInterviewQuestions(text: string, jobDescription?: string, aiConfig?: AIConfig) {
   const jdSection = jobDescription?.trim()
     ? `Tailor the questions to the following job description (focus on skills, responsibilities, and challenges mentioned):
 ${jobDescription}`
     : ""
 
   const { text: content } = await generateText({
-    model: groq("llama-3.3-70b-versatile"),
+    model: getModel(aiConfig),
     prompt: `You are an interview coach. Based on the following resume, generate a diverse set of interview questions that the candidate should prepare for. Include a mix of behavioral, experience-based, and skill-focused questions.
 
 Return ONLY valid JSON (no markdown, no code fences) with this exact structure:
@@ -68,7 +125,7 @@ ${text}`,
   return object
 }
 
-export async function analyzeResume(text: string, jobDescription?: string) {
+export async function analyzeResume(text: string, jobDescription?: string, aiConfig?: AIConfig) {
   const withJd = !!jobDescription?.trim()
 
   const schemaPrompt = withJd
@@ -109,7 +166,7 @@ ${jobDescription}`
     : ""
 
   const { text: content } = await generateText({
-    model: groq("llama-3.3-70b-versatile"),
+    model: getModel(aiConfig),
     prompt: `You are a professional resume reviewer. Analyze this resume text and return ONLY valid JSON (no markdown, no code fences) with this exact structure:
 ${schemaPrompt}
 
