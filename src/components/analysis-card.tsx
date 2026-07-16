@@ -12,7 +12,7 @@ import {
 } from "@/lib/score-utils"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { AlertTriangle, Lightbulb, ChevronDown } from "lucide-react"
+import { HiExclamationTriangle, HiLightBulb, HiChevronDown } from "react-icons/hi2"
 
 interface AnalysisCardProps {
   analysis: ResumeAnalysis
@@ -93,7 +93,7 @@ function SectionCard({
           >
             {section.score}/100
           </Badge>
-          <ChevronDown className="chevron h-4 w-4 text-slate-300 transition-transform duration-200" />
+          <HiChevronDown className="chevron h-4 w-4 text-slate-300 transition-transform duration-200" />
         </summary>
         <div className="px-5 pb-5 space-y-4">
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -116,7 +116,7 @@ function SectionCard({
           {section.issues.length > 0 && (
             <div>
               <h4 className="flex items-center gap-1.5 text-sm font-semibold text-rose-600 mb-2">
-                <AlertTriangle className="h-3.5 w-3.5" /> Issues
+                <HiExclamationTriangle className="h-3.5 w-3.5" /> Issues
               </h4>
               <ScrollArea className="h-28">
                 <ul className="space-y-1.5">
@@ -134,7 +134,7 @@ function SectionCard({
           {section.suggestions.length > 0 && (
             <div>
               <h4 className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 mb-2">
-                <Lightbulb className="h-3.5 w-3.5" /> Suggestions
+                <HiLightBulb className="h-3.5 w-3.5" /> Suggestions
               </h4>
               <ScrollArea className="h-28">
                 <ul className="space-y-1.5">

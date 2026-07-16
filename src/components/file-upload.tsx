@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { cn } from "@/lib/utils"
-import { Loader2, FileText, UploadCloud } from "lucide-react"
+import { HiArrowPath, HiDocumentText, HiCloudArrowUp } from "react-icons/hi2"
 
 interface FileUploadProps {
   onAnalyze: (file: File) => Promise<void>
@@ -41,7 +41,7 @@ export function FileUpload({ onAnalyze, loading }: FileUploadProps) {
           {file ? (
             <div className="flex flex-col items-center gap-3">
               <div className="rounded-full bg-indigo-50 p-3">
-                <FileText className="h-8 w-8 text-indigo-500" />
+                <HiDocumentText className="h-8 w-8 text-indigo-500" />
               </div>
               <p className="font-medium text-slate-800">{file.name}</p>
               <p className="text-sm text-slate-400">
@@ -54,7 +54,7 @@ export function FileUpload({ onAnalyze, loading }: FileUploadProps) {
                 "rounded-full p-3 transition-all duration-300",
                 isDragActive ? "bg-indigo-100 scale-110" : "bg-slate-50"
               )}>
-                <UploadCloud className={cn(
+                <HiCloudArrowUp className={cn(
                   "h-8 w-8 transition-colors duration-300",
                   isDragActive ? "text-indigo-500" : "text-slate-400"
                 )} />
@@ -76,7 +76,7 @@ export function FileUpload({ onAnalyze, loading }: FileUploadProps) {
         >
           <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] animate-none" />
           <span className="relative inline-flex items-center gap-2">
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {loading && <HiArrowPath className="h-4 w-4 animate-spin" />}
             {loading ? "Analyzing your resume..." : "Analyze Resume"}
           </span>
         </button>

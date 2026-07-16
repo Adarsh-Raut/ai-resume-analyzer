@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { FileUpload } from "@/components/file-upload"
 import { AnalysisCard } from "@/components/analysis-card"
+import { ThemeToggle } from "@/components/theme-toggle"
 import type { ResumeAnalysis } from "@/lib/types"
 
 export default function Home() {
@@ -42,6 +43,9 @@ export default function Home() {
   return (
     <div className="flex-1 flex flex-col">
       <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-950">
+        <div className="absolute top-4 right-4 z-10">
+          <ThemeToggle />
+        </div>
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMSIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
         <div className="relative max-w-3xl mx-auto px-4 py-16 sm:py-24">
           <motion.div
