@@ -108,7 +108,9 @@ export default function Home() {
     setAnalysis(entry.analysis)
     setQuestions(null)
     setQuestionsError(null)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    setTimeout(() => {
+      document.getElementById("analysis-results")?.scrollIntoView({ behavior: "smooth" })
+    }, 0)
   }
 
   return (
@@ -175,6 +177,7 @@ export default function Home() {
 
         {analysis && (
           <motion.div
+            id="analysis-results"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
