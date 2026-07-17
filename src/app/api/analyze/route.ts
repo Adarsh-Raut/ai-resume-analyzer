@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs"
+import PDFParser from "pdf2json"
 import { analyzeResume } from "@/lib/ai"
 import type { AIConfig } from "@/lib/ai"
+
+function parsePdf(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const parser = new PDFParser()
+    parser.on("pdfParser_dataReady", (data: { Pages: { Texts: { R: { T: string }[] }[] }[] }) => {
+      const text = data.Pages.map((page) =>
+        page.Texts.map((t) => decodeURIComponent(t.R[0].T)).join(" ")
+      ).join("\n\n")
+      resolve(text)
+    })
+    parser.on("pdfParser_dataError", (errMsg: Error | { parserError: Error }) => reject("parserError" in errMsg ? errMsg.parserError : errMsg))
+    parser.parseBuffer(buffer)
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,17 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-
     let text: string
+
     try {
-      const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
-      const pages: string[] = []
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i)
-        const tc = await page.getTextContent()
-        pages.push(tc.items.map((item) => "str" in item ? (item as { str: string }).str : "").join(" "))
-      }
-      text = pages.join("\n\n")
+      text = await parsePdf(buffer)
     } catch (error) {
       console.error("PDF parse error:", error)
       return NextResponse.json({ error: "Failed to parse PDF" }, { status: 400 })

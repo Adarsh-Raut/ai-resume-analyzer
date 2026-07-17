@@ -20,6 +20,7 @@
     "framer-motion": "^12.42.2",
     "next": "16.2.10",
     "pdf-parse": "^1.1.4",
+    "pdf2json": "^4.0.3",
     "pdfjs-dist": "^6.1.200",
     "react": "19.2.4",
     "react-dom": "19.2.4",
