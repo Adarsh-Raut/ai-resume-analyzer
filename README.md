@@ -2,7 +2,7 @@
 
 > Upload your resume (PDF) and get instant AI-powered feedback to land more interviews.
 
-**[Live Demo](https://ai-resume-analyzer-flame-six.vercel.app/)** · **Built with Next.js 16, Tailwind CSS, shadcn/ui, and the Vercel AI SDK**
+**[Live Demo](https://ai-resume-analyzer0.vercel.app/)** · **Built with Next.js 16, Tailwind CSS, shadcn/ui, and the Vercel AI SDK**
 
 ---
 
