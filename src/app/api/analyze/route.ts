@@ -10,7 +10,11 @@ function parsePdf(buffer: Buffer): Promise<string> {
       const text = data.Pages.map((page) =>
         page.Texts.map((t) => decodeURIComponent(t.R[0].T)).join(" ")
       ).join("\n\n")
-      resolve(text)
+      // Insert spaces between words that are glued together (e.g. "Developerwith" -> "Developer with")
+      const spaced = text.replace(/([a-z,.'"])([A-Z])/g, "$1 $2")
+      // Insert space between digits and letters (e.g. "1.5years" -> "1.5 years")
+      const final = spaced.replace(/(\d)([a-zA-Z])/g, "$1 $2").replace(/([a-zA-Z])(\d)/g, "$1 $2")
+      resolve(final)
     })
     parser.on("pdfParser_dataError", (errMsg: Error | { parserError: Error }) => reject("parserError" in errMsg ? errMsg.parserError : errMsg))
     parser.parseBuffer(buffer)

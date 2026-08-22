@@ -47,6 +47,61 @@ const analysisWithJdSchema = analysisSchema.extend({
   tailored_suggestions: z.array(z.string()),
 })
 
+function sanitizeJsonStrings(str: string): string {
+  let out = ""
+  let inString = false
+  let escaped = false
+  for (const ch of str) {
+    if (inString && !escaped && ch === '"') {
+      inString = false
+      out += ch
+      continue
+    }
+    if (inString && !escaped && ch === "\\") {
+      escaped = true
+      out += ch
+      continue
+    }
+    escaped = false
+    if (!inString && ch === '"') {
+      inString = true
+      out += ch
+      continue
+    }
+    if (inString && ch < " ") {
+      if (ch === "\n") out += "\\n"
+      else if (ch === "\r") out += "\\r"
+      else if (ch === "\t") out += "\\t"
+      continue
+    }
+    out += ch
+  }
+  return out
+}
+
+function parseModelJson(str: string): unknown {
+  const trimmed = str.trim()
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+    return typeof parsed === "string" ? parseModelJson(parsed) : parsed
+  } catch {
+    // fall through to cleanup heuristics
+  }
+
+  let cleaned = trimmed
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "")
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    try {
+      parsed = JSON.parse(JSON.parse(cleaned))
+      return typeof parsed === "string" ? parseModelJson(parsed) : parsed
+    } catch {
+      cleaned = cleaned.slice(1, -1)
+    }
+  }
+  return JSON.parse(sanitizeJsonStrings(cleaned))
+}
+
 function getModel(config?: AIConfig) {
   const provider = config?.provider || "groq"
   const apiKey = config?.apiKey || undefined
@@ -67,13 +122,13 @@ function getModel(config?: AIConfig) {
   }
 
   // Default: Groq with env var
-  return createGroq({ apiKey: process.env.GROQ_API_KEY })("llama-3.3-70b-versatile")
+  return createGroq({ apiKey: process.env.GROQ_API_KEY })("openai/gpt-oss-120b")
 }
 
 export const PROVIDER_DEFAULTS: Record<AIProvider, { models: string[]; defaultModel: string; label: string }> = {
   groq: {
-    models: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"],
-    defaultModel: "llama-3.3-70b-versatile",
+    models: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.6-27b"],
+    defaultModel: "openai/gpt-oss-120b",
     label: "Groq",
   },
   openai: {
@@ -121,7 +176,7 @@ Resume:
 ${text}`,
   })
 
-  const object = interviewQuestionsSchema.parse(JSON.parse(content))
+  const object = interviewQuestionsSchema.parse(parseModelJson(content))
   return object
 }
 
@@ -176,6 +231,6 @@ ${jdSection}`,
   })
 
   const schema = withJd ? analysisWithJdSchema : analysisSchema
-  const object = schema.parse(JSON.parse(content))
+  const object = schema.parse(parseModelJson(content))
   return object
 }
