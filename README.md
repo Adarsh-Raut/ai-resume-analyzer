@@ -174,3 +174,7 @@ npm run start     # Start production server
 ## License
 
 MIT
+
+---
+
+Built by [Adarsh Raut](https://adarshraut.vercel.app)
